@@ -38,7 +38,7 @@ public class Server : MonoBehaviour {
         HostTopology topology = new HostTopology(config, maxConnections);
 
         // Socket Configurations
-        socketId = NetworkTransport.AddHost(topology, socketPort, masterServerIp);
+        socketId = NetworkTransport.AddHost(topology, socketPort);
         print("Socket open on port " + socketPort + ": ID #" + socketId);
 
         // Master Server Connection
