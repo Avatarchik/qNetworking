@@ -45,53 +45,6 @@ public class Server : MonoBehaviour {
         masterServerId = Connect(masterServerIp, masterServerPort, socketId);
     }
 
-    /// <summary>
-    /// Receives data.
-    /// </summary>
-    void Listen() {
-        int recHostId;
-        int recConnectionId;
-        int recChannelId;
-        byte[] recBuffer = new byte[1024];
-        int bufferSize = 1024;
-        int dataSize;
-        byte error;
-        NetworkEventType recData = NetworkTransport.Receive(
-            out recHostId,
-            out recConnectionId,
-            out recChannelId,
-            recBuffer,
-            bufferSize,
-            out dataSize,
-            out error
-        );
-
-        switch (recData) {
-            case NetworkEventType.DataEvent:
-                Stream stream = new MemoryStream(recBuffer);
-                BinaryFormatter formatter = new BinaryFormatter();
-                string message = formatter.Deserialize(stream) as string;
-                print("Message received: " + message);
-                break;
-
-            case NetworkEventType.ConnectEvent:
-                print("Remote connection received.");
-                break;
-
-            case NetworkEventType.DisconnectEvent:
-                print("Remote connection closed.");
-                break;
-
-            case NetworkEventType.Nothing:
-                //print("Nothing received.");
-                break;
-
-            case NetworkEventType.BroadcastEvent:
-                print("Broadcast discovery event received.");
-                break;
-        }
-    }
-
     void Update() {
         Listen();
         Send("Hello Master Server"); // Think about shortening messages in to numbered codes to minimize data.
@@ -137,6 +90,55 @@ public class Server : MonoBehaviour {
         }
         else {
             print("Message successfully sent.");
+        }
+    }
+
+    /// <summary>
+    /// Receives data.
+    /// </summary>
+    void Listen()
+    {
+        int recHostId;
+        int recConnectionId;
+        int recChannelId;
+        byte[] recBuffer = new byte[1024];
+        int bufferSize = 1024;
+        int dataSize;
+        byte error;
+        NetworkEventType recData = NetworkTransport.Receive(
+            out recHostId,
+            out recConnectionId,
+            out recChannelId,
+            recBuffer,
+            bufferSize,
+            out dataSize,
+            out error
+        );
+
+        switch (recData)
+        {
+            case NetworkEventType.DataEvent:
+                Stream stream = new MemoryStream(recBuffer);
+                BinaryFormatter formatter = new BinaryFormatter();
+                string message = formatter.Deserialize(stream) as string;
+                print("Message received: " + message);
+                break;
+
+            case NetworkEventType.ConnectEvent:
+                print("Remote connection received.");
+                break;
+
+            case NetworkEventType.DisconnectEvent:
+                print("Remote connection closed.");
+                break;
+
+            case NetworkEventType.Nothing:
+                //print("Nothing received.");
+                break;
+
+            case NetworkEventType.BroadcastEvent:
+                print("Broadcast discovery event received.");
+                break;
         }
     }
 }
