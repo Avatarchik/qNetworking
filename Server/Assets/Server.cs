@@ -115,8 +115,7 @@ public class Server : MonoBehaviour {
             out error
         );
 
-        switch (recData)
-        {
+        switch (recData) {
             case NetworkEventType.DataEvent:
                 Stream stream = new MemoryStream(recBuffer);
                 BinaryFormatter formatter = new BinaryFormatter();
@@ -125,11 +124,21 @@ public class Server : MonoBehaviour {
                 break;
 
             case NetworkEventType.ConnectEvent:
-                print("Remote connection received.");
+                if (masterServerId == recConnectionId) {
+                    print("Self-connection approved.");
+                }
+                else {
+                    print("Remote connection incoming.");
+                }
                 break;
 
             case NetworkEventType.DisconnectEvent:
-                print("Remote connection closed.");
+                if (masterServerId == recConnectionId) {
+                    print("Self-connection failed: " + (NetworkError)error);
+                }
+                else {
+                    print("Remote connection closed.");
+                }
                 break;
 
             case NetworkEventType.Nothing:

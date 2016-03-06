@@ -4,6 +4,9 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 //http://docs.unity3d.com/Manual/UNetUsingTransport.html
 public class MasterServer : MonoBehaviour {
+    // Configuration Channels
+    byte reliableChanId;
+
     // Sockect Configurations
     int socketId;
     int socketPort = 1337;
@@ -17,6 +20,7 @@ public class MasterServer : MonoBehaviour {
 
         // Configuration Channels
         ConnectionConfig config = new ConnectionConfig();
+        reliableChanId = config.AddChannel(QosType.Reliable);
 
         // Max Connections
         int maxConnections = 10;
@@ -85,11 +89,21 @@ public class MasterServer : MonoBehaviour {
                 break;
 
             case NetworkEventType.ConnectEvent:
-                print("Remote connection received.");
+                if (connectionId == recConnectionId) {
+                    print("Self-connection approved.");
+                }
+                else {
+                    print("Remote connection incoming.");
+                }
                 break;
 
             case NetworkEventType.DisconnectEvent:
-                print("Remote connection closed.");
+                if (connectionId == recConnectionId) {
+                    print("Self-connection failed: " + (NetworkError)error);
+                }
+                else {
+                    print("Remote connection closed.");
+                }
                 break;
 
             case NetworkEventType.Nothing:
