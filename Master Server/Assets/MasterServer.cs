@@ -1,9 +1,32 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
+
+using System;
+using System.Text;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+
 //http://docs.unity3d.com/Manual/UNetUsingTransport.html
+
 public class MasterServer : MonoBehaviour {
+    #region Essentials
+    bool debugging = true;
+    public void debug(string msg) {
+        if(debugging)
+            print(msg);
+    }
+
+    public byte[] StringToByteArray(string str, Encoding encoding) {
+        return encoding.GetBytes(str);
+    }
+
+    public string ByteArrayToString(byte[] bytes, Encoding encoding) {
+        return encoding.GetString(bytes);
+    }
+    #endregion
+
+    #region Network
+    #region Network Variables
     // Configuration Channels
     byte reliableChanId;
 
@@ -13,8 +36,9 @@ public class MasterServer : MonoBehaviour {
 
     // Communication
     int connectionId;
+    #endregion
 
-	void Start() {
+    void Start() {
         // Initializing the Transport Layer with no arguments (default settings)
         NetworkTransport.Init();
 
@@ -82,10 +106,15 @@ public class MasterServer : MonoBehaviour {
 
         switch (recData) {
             case NetworkEventType.DataEvent:
-                Stream stream = new MemoryStream(recBuffer);
-                BinaryFormatter formatter = new BinaryFormatter();
-                string message = formatter.Deserialize(stream) as string;
+                // Find a way to tell if it was serialized or not.
+                ///Stream stream = new MemoryStream(recBuffer);
+                ///BinaryFormatter formatter = new BinaryFormatter();
+                ///string message = formatter.Deserialize(stream) as string;
+                string message = ByteArrayToString(recBuffer, Encoding.UTF8);
                 print("Message received: " + message);
+
+                byte code = Convert.ToByte(message.Substring(0, message.IndexOf(' ') + 1));
+                PerformAction(code, message.Substring(message.IndexOf(' ') + 1));
                 break;
 
             case NetworkEventType.ConnectEvent:
@@ -115,4 +144,24 @@ public class MasterServer : MonoBehaviour {
                 break;
         }
     }
+    #endregion
+
+    #region Action Variables
+    [Flags]
+    public enum Actions : byte {
+        Auth = 0x00,
+        Debug = 0x01 // test
+    }
+
+    void PerformAction(byte code, string msg) {
+        // Unsure if this cast will work.
+        switch ((Actions)code) {
+            case Actions.Debug:
+                debug("Debugging socket: " + msg);
+                break;
+
+        }
+    }
+    #endregion
+
 }

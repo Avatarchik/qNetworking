@@ -1,10 +1,31 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
+
+using System;
+using System.Text;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 
 public class Server : MonoBehaviour {
+    #region Essentials
+    bool debugging = true;
+    public void debug(string msg) {
+        if(debugging)
+            print(msg);
+    }
+
+    public byte[] StringToByteArray(string str, Encoding encoding) {
+        return encoding.GetBytes(str);
+    }
+
+    public string ByteArrayToString(byte[] bytes, Encoding encoding) {
+        return encoding.GetString(bytes);
+    }
+    #endregion
+
+    #region Network
+    #region Network Variables
     // Configuration Channels
     byte reliableChanId;
 
@@ -16,6 +37,7 @@ public class Server : MonoBehaviour {
     int masterServerId;
     string masterServerIp = "72.91.241.243";
     int masterServerPort = 1337;
+    #endregion
 
     /// <summary>
     /// Should change ports and IPs
@@ -39,7 +61,7 @@ public class Server : MonoBehaviour {
 
         // Socket Configurations
         socketId = NetworkTransport.AddHost(topology, socketPort);
-        print("Socket open on port " + socketPort + ": ID #" + socketId);
+        debug("Socket open on port " + socketPort + ": ID #" + socketId);
 
         // Master Server Connection
         masterServerId = Connect(masterServerIp, masterServerPort, socketId);
@@ -47,7 +69,7 @@ public class Server : MonoBehaviour {
 
     void Update() {
         Listen();
-        Send("Hello Master Server"); // Think about shortening messages in to numbered codes to minimize data.
+        Send((byte)Actions.Debug + " Hello world!", masterServerId); // Think about shortening messages in to numbered codes to minimize data.
     }
 
     /// <summary>
@@ -61,10 +83,10 @@ public class Server : MonoBehaviour {
 
         int newConnectionId = NetworkTransport.Connect(id, ip, port, 0, out error);
         if ((NetworkError)error != NetworkError.Ok) {
-            print("Failed to connect because:" + (NetworkError)error);
+            debug("Failed to connect because:" + (NetworkError)error);
         }
         else {
-            print("Connected to server (" + ip + ":" + port + "): Connection ID #" + newConnectionId);
+            debug("Connected to server (" + ip + ":" + port + "): Connection ID #" + newConnectionId);
         }
 
         return newConnectionId;
@@ -73,23 +95,29 @@ public class Server : MonoBehaviour {
     /// <summary>
     /// Sends a message to the Master Server. It should be modified to send a message to any connection provided in the future.
     /// </summary>
-    public void Send(string msg) {
+    public void Send(string msg, int connection, bool serialize = false) {
         byte error;
 
         // Serialization
         byte[] buffer = new byte[1024];
-        Stream stream = new MemoryStream(buffer);
-        BinaryFormatter formatter = new BinaryFormatter();
-        formatter.Serialize(stream, msg);
         int bufferSize = 1024;
 
-        NetworkTransport.Send(socketId, masterServerId, reliableChanId, buffer, bufferSize, out error);
-
-        if((NetworkError)error != NetworkError.Ok) {
-            print("Message failed to send because: " + (NetworkError)error);
+        if(serialize) {
+            Stream stream = new MemoryStream(buffer);
+            BinaryFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(stream, msg);
         }
         else {
-            print("Message successfully sent.");
+            buffer = StringToByteArray(msg, Encoding.UTF8);
+        }
+
+        NetworkTransport.Send(socketId, connection, reliableChanId, buffer, bufferSize, out error);
+
+        if((NetworkError)error != NetworkError.Ok) {
+            debug("Message failed to send because: " + (NetworkError)error);
+        }
+        else {
+            debug("Message successfully sent.");
         }
     }
 
@@ -120,34 +148,53 @@ public class Server : MonoBehaviour {
                 Stream stream = new MemoryStream(recBuffer);
                 BinaryFormatter formatter = new BinaryFormatter();
                 string message = formatter.Deserialize(stream) as string;
-                print("Message received: " + message);
+                debug("Message received: " + message);
                 break;
 
             case NetworkEventType.ConnectEvent:
                 if (masterServerId == recConnectionId) {
-                    print("Self-connection approved.");
+                    debug("Self-connection approved.");
                 }
                 else {
-                    print("Remote connection incoming.");
+                    debug("Remote connection incoming.");
                 }
                 break;
 
             case NetworkEventType.DisconnectEvent:
                 if (masterServerId == recConnectionId) {
-                    print("Self-connection failed: " + (NetworkError)error);
+                    debug("Self-connection failed: " + (NetworkError)error);
                 }
                 else {
-                    print("Remote connection closed.");
+                    debug("Remote connection closed.");
                 }
                 break;
 
             case NetworkEventType.Nothing:
-                //print("Nothing received.");
+                //debug("Nothing received.");
                 break;
 
             case NetworkEventType.BroadcastEvent:
-                print("Broadcast discovery event received.");
+                debug("Broadcast discovery event received.");
                 break;
         }
     }
+    #endregion
+
+    #region Actions
+    #region Action Variables
+    [Flags]
+    public enum Actions : byte {
+        Auth = 0x00,
+        Debug = 0x01 // test - 
+    }
+    #endregion
+
+    /// <summary>
+    /// Send the requested auth password to the master server.
+    /// </summary>
+    /// <param name="key">The public key.</param>
+    void Authenticate(string key) {
+        Send(Actions.Auth + key, masterServerId);
+    }
+    #endregion
 }
