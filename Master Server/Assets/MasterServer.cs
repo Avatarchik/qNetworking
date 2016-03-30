@@ -39,6 +39,8 @@ public class MasterServer : MonoBehaviour {
     #endregion
 
     void Start() {
+        LoadPassword();
+
         // Initializing the Transport Layer with no arguments (default settings)
         NetworkTransport.Init();
 
@@ -114,7 +116,7 @@ public class MasterServer : MonoBehaviour {
                 print("Message received: " + message);
 
                 byte code = Convert.ToByte(message.Substring(0, message.IndexOf(' ') + 1));
-                PerformAction(code, message.Substring(message.IndexOf(' ') + 1));
+                PerformAction(code, message.Substring(message.IndexOf(' ') + 1).TrimEnd(new char[]{'\r', '\n'}), recConnectionId);
                 break;
 
             case NetworkEventType.ConnectEvent:
@@ -146,20 +148,76 @@ public class MasterServer : MonoBehaviour {
     }
     #endregion
 
+    #region Actions
     #region Action Variables
     [Flags]
     public enum Actions : byte {
         Auth = 0x00,
         Debug = 0x01 // test
     }
+    #endregion
 
-    void PerformAction(byte code, string msg) {
+    void PerformAction(byte code, string msg, int id) {
         // Unsure if this cast will work.
         switch ((Actions)code) {
             case Actions.Debug:
                 debug("Debugging socket: " + msg);
                 break;
 
+            case Actions.Auth:
+                Authenticate(msg, id);
+                break;
+        }
+    }
+    #endregion
+
+    #region Security & Authentication
+    #region Security & Authentication Variables
+    public string password;
+    #endregion
+
+    bool LoadPassword() {
+        string rawPath = Application.dataPath + "/auth/";
+        string path = Application.dataPath + "/auth/keyphrase.passwd";
+
+        if(!Directory.Exists(rawPath)) {
+            Directory.CreateDirectory(rawPath);
+        }
+        else {
+            if(File.Exists(path)) {
+                password = File.ReadAllText(path);
+                return true;
+            }
+        }
+        
+        password = CreatePassword(256);
+        File.WriteAllText(path, password);
+        return false;
+    }
+
+    string CreatePassword(int length) {
+        const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=[{}]|:;<>,.?";
+        StringBuilder pass = new StringBuilder();
+
+        while (0 < length--) {
+            pass.Append(valid[UnityEngine.Random.Range(0, valid.Length)]);
+        }
+
+        return pass.ToString();
+    }
+
+    void Authenticate(string msg, int id) {
+        if(password == msg) {
+            debug("Server has been authenticated.");
+        } else {
+            debug("Server has failed authentication. (10 attempts left before added to blacklist)"); // blacklist can be edited easily via text file so the user won't have to go through a lot of trouble to remove a mistaken blacklist
+
+            byte error;
+            NetworkTransport.Disconnect(socketId, id, out error);
+
+            if ((NetworkError)error != NetworkError.Ok) {
+                debug("Failed to disconnect remote connection because:" + (NetworkError)error);
+            }
         }
     }
     #endregion

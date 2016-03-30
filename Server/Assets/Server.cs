@@ -48,6 +48,15 @@ public class Server : MonoBehaviour {
 
 	// Use this for initialization
 	void Start() {
+        if (!LoadPassword()) {
+            #if UNITY_EDITOR
+                Debug.Break();
+            #else
+                Application.Quit();
+            #endif
+            return;
+        }
+
         // Initializing the Transport Layer with no arguments (default settings)
         NetworkTransport.Init();
 
@@ -69,7 +78,6 @@ public class Server : MonoBehaviour {
 
     void Update() {
         Listen();
-        Send((byte)Actions.Debug + " Hello world!", masterServerId); // Think about shortening messages in to numbered codes to minimize data.
     }
 
     /// <summary>
@@ -154,6 +162,8 @@ public class Server : MonoBehaviour {
             case NetworkEventType.ConnectEvent:
                 if (masterServerId == recConnectionId) {
                     debug("Self-connection approved.");
+                    Authenticate();
+                    Send((byte)Actions.Debug + " Hello world!", masterServerId); // Think about shortening messages in to numbered codes to minimize data.
                 }
                 else {
                     debug("Remote connection incoming.");
@@ -162,7 +172,7 @@ public class Server : MonoBehaviour {
 
             case NetworkEventType.DisconnectEvent:
                 if (masterServerId == recConnectionId) {
-                    debug("Self-connection failed: " + (NetworkError)error);
+                    debug("Master Server connection closed: " + (NetworkError)error);
                 }
                 else {
                     debug("Remote connection closed.");
@@ -192,9 +202,32 @@ public class Server : MonoBehaviour {
     /// <summary>
     /// Send the requested auth password to the master server.
     /// </summary>
-    /// <param name="key">The public key.</param>
-    void Authenticate(string key) {
-        Send(Actions.Auth + key, masterServerId);
+    void Authenticate() {
+        Send((byte)Actions.Auth + " " + password, masterServerId);
+    }
+    #endregion
+
+    #region Security & Authentication
+    #region Security & Authentication Variables
+    public string password;
+    #endregion
+
+    bool LoadPassword() {
+        string rawPath = Application.dataPath + "/auth/";
+        string path = Application.dataPath + "/auth/keyphrase.passwd";
+
+        if(!Directory.Exists(rawPath)) {
+            Directory.CreateDirectory(rawPath);
+        }
+        else {
+            if(File.Exists(path)) {
+                password = File.ReadAllText(path);
+                return true;
+            }
+        }
+
+        debug("Error: Missing keyphrase.passwd file.");
+        return false;
     }
     #endregion
 }
