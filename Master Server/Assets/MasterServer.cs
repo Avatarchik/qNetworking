@@ -112,7 +112,7 @@ public class MasterServer : MonoBehaviour {
                 ///Stream stream = new MemoryStream(recBuffer);
                 ///BinaryFormatter formatter = new BinaryFormatter();
                 ///string message = formatter.Deserialize(stream) as string;
-                string message = ByteArrayToString(recBuffer, Encoding.UTF8);
+                string message = ByteArrayToString(recBuffer, Encoding.UTF8).Substring(0, dataSize);
                 print("Message received: " + message);
 
                 byte code = Convert.ToByte(message.Substring(0, message.IndexOf(' ') + 1));
@@ -210,6 +210,7 @@ public class MasterServer : MonoBehaviour {
         if(password == msg) {
             debug("Server has been authenticated.");
         } else {
+            debug("[" + password.Length + "/" + msg.Length + "], [" + password.Substring(0,1) + "/" + msg.Substring(0,1) + "], [" + password.Substring(password.Length - 1, 1) + "/" + msg.Substring(msg.Length - 1, 1) + "]");
             debug("Server has failed authentication. (10 attempts left before added to blacklist)"); // blacklist can be edited easily via text file so the user won't have to go through a lot of trouble to remove a mistaken blacklist
 
             byte error;

@@ -6,7 +6,6 @@ using System.Text;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-
 public class Server : MonoBehaviour {
     #region Essentials
     bool debugging = true;
@@ -108,7 +107,7 @@ public class Server : MonoBehaviour {
 
         // Serialization
         byte[] buffer = new byte[1024];
-        int bufferSize = 1024;
+        int bufferSize = msg.Length;
 
         if(serialize) {
             Stream stream = new MemoryStream(buffer);
