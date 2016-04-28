@@ -1,28 +1,18 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
 
+using System.Collections.Generic;
 using System;
 using System.Text;
 using System.IO;
 
-//Transport Layer Info: http://docs.unity3d.com/Manual/UNetUsingTransport.html
+public class ServerList : Essentials {
+    #region
+    public Dictionary<string, MasterServer> serverList;
 
-public class MasterServer : MonoBehaviour {
-    #region Essentials
-    bool debugging = true;
-    public void debug(string msg) {
-        if(debugging)
-            print(msg);
+    public void Add(MasterServer mS) {
+        serverList.Add(mS.ip, mS);
     }
-
-    public byte[] StringToByteArray(string str, Encoding encoding) {
-        return encoding.GetBytes(str);
-    }
-
-    public string ByteArrayToString(byte[] bytes, Encoding encoding) {
-        return encoding.GetString(bytes);
-    }
-    #endregion
 
     #region Network
     #region Network Variables
@@ -31,13 +21,14 @@ public class MasterServer : MonoBehaviour {
 
     // Sockect Configurations
     int socketId;
-    int socketPort = 1337;
+    int socketPort = 20000;
 
     // Communication
     int connectionId;
     #endregion
 
-    void Start() {
+    void Start()
+    {
         LoadPassword();
 
         // Initializing the Transport Layer with no arguments (default settings)
@@ -59,7 +50,8 @@ public class MasterServer : MonoBehaviour {
         connectionId = Connect("127.0.0.1", socketPort, socketId);
     }
 
-    void Update() {
+    void Update()
+    {
         Listen();
     }
 
@@ -69,7 +61,8 @@ public class MasterServer : MonoBehaviour {
     /// <param name="ip">The ip address to connect to.</param>
     /// <param name="port">The port that is being hosted on.</param>
     /// <param name="id">The host connection ID.</param>
-    int Connect(string ip, int port, int id = 0) {
+    int Connect(string ip, int port, int id = 0)
+    {
         byte error;
 
         int newConnectionId = NetworkTransport.Connect(id, ip, port, 0, out error);
@@ -87,7 +80,8 @@ public class MasterServer : MonoBehaviour {
     /// <summary>
     /// Receives data.
     /// </summary>
-    void Listen() {
+    void Listen()
+    {
         int recHostId;
         int recConnectionId;
         int recChannelId;
@@ -105,7 +99,8 @@ public class MasterServer : MonoBehaviour {
             out error
         );
 
-        switch (recData) {
+        switch (recData)
+        {
             case NetworkEventType.DataEvent:
                 // Find a way to tell if it was serialized or not.
                 ///Stream stream = new MemoryStream(recBuffer);
@@ -115,11 +110,12 @@ public class MasterServer : MonoBehaviour {
                 print("Message received: " + message);
 
                 byte code = Convert.ToByte(message.Substring(0, message.IndexOf(' ') + 1));
-                PerformAction(code, message.Substring(message.IndexOf(' ') + 1).TrimEnd(new char[]{'\r', '\n'}), recConnectionId);
+                PerformAction(code, message.Substring(message.IndexOf(' ') + 1).TrimEnd(new char[] { '\r', '\n' }), recConnectionId);
                 break;
 
             case NetworkEventType.ConnectEvent:
-                if (connectionId == recConnectionId) {
+                if (connectionId == recConnectionId)
+                {
                     print("Self-connection approved.");
                 }
                 else {
@@ -128,7 +124,8 @@ public class MasterServer : MonoBehaviour {
                 break;
 
             case NetworkEventType.DisconnectEvent:
-                if (connectionId == recConnectionId) {
+                if (connectionId == recConnectionId)
+                {
                     print("Self-connection failed: " + (NetworkError)error);
                 }
                 else {
@@ -150,15 +147,21 @@ public class MasterServer : MonoBehaviour {
     #region Actions
     #region Action Variables
     [Flags]
-    public enum Actions : byte {
-        Auth = 0x00,
-        Debug = 0x01 // test
+    public enum ListData : byte
+    {
+        ip = 0x00,
+        curPlayers = 0x01,
+        maxPlayers = 0x02,
+        servers = 0x03
+
     }
     #endregion
 
-    void PerformAction(byte code, string msg, int id) {
+    void PerformAction(byte code, string msg, int id)
+    {
         // Unsure if this cast will work.
-        switch ((Actions)code) {
+        switch ((Actions)code)
+        {
             case Actions.Debug:
                 debug("Debugging socket: " + msg);
                 break;
@@ -175,50 +178,69 @@ public class MasterServer : MonoBehaviour {
     public string password;
     #endregion
 
-    bool LoadPassword() {
+    bool LoadPassword()
+    {
         string rawPath = Application.dataPath + "/auth/";
         string path = Application.dataPath + "/auth/keyphrase.passwd";
 
-        if(!Directory.Exists(rawPath)) {
+        if (!Directory.Exists(rawPath))
+        {
             Directory.CreateDirectory(rawPath);
         }
         else {
-            if(File.Exists(path)) {
+            if (File.Exists(path))
+            {
                 password = File.ReadAllText(path);
                 return true;
             }
         }
-        
+
         password = CreatePassword(256);
         File.WriteAllText(path, password);
         return false;
     }
 
-    string CreatePassword(int length) {
+    string CreatePassword(int length)
+    {
         const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_-+=[{}]|:;<>,.?";
         StringBuilder pass = new StringBuilder();
 
-        while (0 < length--) {
+        while (0 < length--)
+        {
             pass.Append(valid[UnityEngine.Random.Range(0, valid.Length)]);
         }
 
         return pass.ToString();
     }
 
-    void Authenticate(string msg, int id) {
-        if(password == msg) {
+    void Authenticate(string msg, int id)
+    {
+        if (password == msg)
+        {
             debug("Server has been authenticated.");
-        } else {
+        }
+        else {
             debug("Server has failed authentication. (10 attempts left before added to blacklist)"); // blacklist can be edited easily via text file so the user won't have to go through a lot of trouble to remove a mistaken blacklist
 
             byte error;
             NetworkTransport.Disconnect(socketId, id, out error);
 
-            if ((NetworkError)error != NetworkError.Ok) {
+            if ((NetworkError)error != NetworkError.Ok)
+            {
                 debug("Failed to disconnect remote connection because:" + (NetworkError)error);
             }
         }
     }
     #endregion
+}
 
+public class MasterServer {
+    public int servers;
+    public string ip;
+    public int curPlayers;
+    public int maxPlayers;
+
+    public MasterServer(string ip) {
+        this.ip = ip;
+    }
 }

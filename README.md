@@ -1,4 +1,4 @@
-# qNetworking
+﻿# qNetworking
 A Unity3D Low-Level API networking system.
 
 
@@ -6,7 +6,7 @@ A Unity3D Low-Level API networking system.
 
 ##### Setup
 
-There are three separate files for this project. The Master Server (Linux only), the Server (Linux only), and the Game (Win/Mac/Lin). The Server and the Game are technically the same files. The only difference though is if there is a password.pub file present the Game acts as a Server. Once the Master Server starts up, it runs the Server and also generates a highly encrypted password and password.pub file. The Master Server begins listening for connections from a Server and a Game (note: Game connection requires at least1 Server authenticated). The Server reads a configuration file to find out the IP of the Master Server. The Server then sends the password in password.pub to the Master Server. The Master Server receives the password and validates it with the private key. If it is not valid then the connection is dropped. If it is valid then the Server is added to the "serverList" variable in the Master Server.
+There are three separate files for this project. The Master Server (Linux only), the Server (Linux only), and the Game (Win/Mac/Lin). The Server and the Game are technically the same files. The only difference though is if there is a keyphrase.passwd file present the Game acts as a Server. Once the Master Server starts up, it runs the Server and also generates a highly encrypted password and keyphrase.passwd file. The Master Server begins listening for connections from a Server and a Game (note: Game connection requires at least 1 Server authenticated). The Server reads a configuration file to find out the IP of the Master Server. The Server then sends the password in keyphrase.passwd to the Master Server. The Master Server receives the password and validates it with the private key. If it is not valid then the connection is dropped. If it is valid then the Server is added to the "serverList" variable in the Master Server.
 
   
 

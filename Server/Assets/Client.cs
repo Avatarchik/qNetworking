@@ -7,8 +7,8 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.RegularExpressions;
 
-public class Server : Essentials {
-
+public class Client : Essentials
+{
     #region Network
     #region Network Variables
     // Configuration Channels
@@ -27,7 +27,8 @@ public class Server : Essentials {
     /// <summary>
     /// Should change ports and IPs
     /// </summary>
-    bool LoadConfig() {
+    bool LoadConfig()
+    {
         string rawPath = Application.dataPath + "/auth/";
         string path = Application.dataPath + "/auth/configurations.config";
 
@@ -47,7 +48,7 @@ public class Server : Essentials {
                 string optionName = match.Groups["key"].Value;
                 string optionValue = match.Groups["value"].Value;
 
-                debug(str);
+                Essentials.debug(str);
                 debug(optionName + "|" + optionValue);
                 return true;
             }
@@ -59,14 +60,16 @@ MasterServerPort = 1337");
         return false;
     }
 
-	// Use this for initialization
-	void Start() {
-        if (!LoadPassword()) {
-            #if UNITY_EDITOR
-                Debug.Break(); // Add and load the client script instead and then delete this script.
-            #else
+    // Use this for initialization
+    void Start()
+    {
+        if (!LoadPassword())
+        {
+#if UNITY_EDITOR
+            Debug.Break(); // Add and load the client script instead and then delete this script.
+#else
                 Application.Quit(); // Load the client instead.
-            #endif
+#endif
             return;
         }
 
@@ -91,7 +94,8 @@ MasterServerPort = 1337");
         masterServerId = Connect(masterServerIp, masterServerPort, socketId);
     }
 
-    void Update() {
+    void Update()
+    {
         Listen();
     }
 
@@ -101,11 +105,13 @@ MasterServerPort = 1337");
     /// <param name="ip">The ip address to connect to.</param>
     /// <param name="port">The port that is being hosted on.</param>
     /// <param name="id">The host connection ID.</param>
-    int Connect(string ip, int port, int id = 0) {
+    int Connect(string ip, int port, int id = 0)
+    {
         byte error;
 
         int newConnectionId = NetworkTransport.Connect(id, ip, port, 0, out error);
-        if ((NetworkError)error != NetworkError.Ok) {
+        if ((NetworkError)error != NetworkError.Ok)
+        {
             debug("Failed to connect because:" + (NetworkError)error);
         }
         else {
@@ -118,14 +124,16 @@ MasterServerPort = 1337");
     /// <summary>
     /// Sends a message to the Master Server. It should be modified to send a message to any connection provided in the future.
     /// </summary>
-    public void Send(string msg, int connection, bool serialize = false) {
+    public void Send(string msg, int connection, bool serialize = false)
+    {
         byte error;
 
         // Serialization
         byte[] buffer = new byte[1024];
         int bufferSize = msg.Length;
 
-        if(serialize) {
+        if (serialize)
+        {
             Stream stream = new MemoryStream(buffer);
             BinaryFormatter formatter = new BinaryFormatter();
             formatter.Serialize(stream, msg);
@@ -136,7 +144,8 @@ MasterServerPort = 1337");
 
         NetworkTransport.Send(socketId, connection, reliableChanId, buffer, bufferSize, out error);
 
-        if((NetworkError)error != NetworkError.Ok) {
+        if ((NetworkError)error != NetworkError.Ok)
+        {
             debug("Message failed to send because: " + (NetworkError)error);
         }
         else {
@@ -166,7 +175,8 @@ MasterServerPort = 1337");
             out error
         );
 
-        switch (recData) {
+        switch (recData)
+        {
             case NetworkEventType.DataEvent:
                 Stream stream = new MemoryStream(recBuffer);
                 BinaryFormatter formatter = new BinaryFormatter();
@@ -175,7 +185,8 @@ MasterServerPort = 1337");
                 break;
 
             case NetworkEventType.ConnectEvent:
-                if (masterServerId == recConnectionId) {
+                if (masterServerId == recConnectionId)
+                {
                     debug("Self-connection approved.");
                     Authenticate();
                     Send((byte)Actions.Debug + " Hello world!", masterServerId); // Think about shortening messages in to numbered codes to minimize data.
@@ -186,7 +197,8 @@ MasterServerPort = 1337");
                 break;
 
             case NetworkEventType.DisconnectEvent:
-                if (masterServerId == recConnectionId) {
+                if (masterServerId == recConnectionId)
+                {
                     debug("Master Server connection closed: " + (NetworkError)error);
                 }
                 else {
@@ -208,7 +220,8 @@ MasterServerPort = 1337");
     #region Actions
     #region Action Variables
     [Flags]
-    public enum Actions : byte {
+    public enum Actions : byte
+    {
         Auth = 0x00,
         Debug = 0x01 // test - 
     }
@@ -217,7 +230,8 @@ MasterServerPort = 1337");
     /// <summary>
     /// Send the requested auth password to the master server.
     /// </summary>
-    void Authenticate() {
+    void Authenticate()
+    {
         Send((byte)Actions.Auth + " " + password, masterServerId);
     }
     #endregion
@@ -227,15 +241,18 @@ MasterServerPort = 1337");
     public string password;
     #endregion
 
-    bool LoadPassword() {
+    bool LoadPassword()
+    {
         string rawPath = Application.dataPath + "/auth/";
         string path = Application.dataPath + "/auth/keyphrase.passwd";
 
-        if(!Directory.Exists(rawPath)) {
+        if (!Directory.Exists(rawPath))
+        {
             Directory.CreateDirectory(rawPath);
         }
         else {
-            if(File.Exists(path)) {
+            if (File.Exists(path))
+            {
                 password = File.ReadAllText(path);
                 return true;
             }
